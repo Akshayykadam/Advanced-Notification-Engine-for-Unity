@@ -16,6 +16,11 @@ namespace DevOrbit.AdvancedNotificationEngine.Runtime.Core
         private static DoNotDisturbSettings _dndSettings = new DoNotDisturbSettings();
 
         /// <summary>
+        /// Checks if the native bridge is successfully initialized.
+        /// </summary>
+        public static bool IsInitialized => _bridge != null && _bridge.IsInitialized;
+
+        /// <summary>
         /// Event fired when a notification is opened by the user.
         /// </summary>
         public static event Action<string> OnNotificationOpened;
@@ -29,6 +34,12 @@ namespace DevOrbit.AdvancedNotificationEngine.Runtime.Core
         /// Event fired when a notification action button is clicked.
         /// </summary>
         public static event Action<string, Dictionary<string, string>> OnActionTriggered;
+
+        /// <summary>
+        /// Event fired when a native log message is received from Java/iOS.
+        /// Subscribe to this to display native logs in your UI.
+        /// </summary>
+        public static event Action<string> OnNativeLog;
 
         /// <summary>
         /// Initializes the notification system. Must be called before scheduling.
@@ -49,7 +60,23 @@ namespace DevOrbit.AdvancedNotificationEngine.Runtime.Core
             
             _bridge.Initialize();
             _isInitialized = true;
+
+            // Create a GameObject to receive UnitySendMessage calls from Java
+            var go = new GameObject("AdvancedNotificationEngineBridge");
+            GameObject.DontDestroyOnLoad(go);
+            go.AddComponent<NotificationBridgeReceiver>();
+
             Debug.Log("[NotificationManager] Initialized.");
+        }
+
+        // Internal class to receive messages from native via UnitySendMessage
+        public class NotificationBridgeReceiver : MonoBehaviour
+        {
+            public void OnNativeLog(string msg)
+            {
+                Debug.Log("[Native-Android] " + msg);
+                NotificationManager.OnNativeLog?.Invoke(msg);
+            }
         }
 
         /// <summary>

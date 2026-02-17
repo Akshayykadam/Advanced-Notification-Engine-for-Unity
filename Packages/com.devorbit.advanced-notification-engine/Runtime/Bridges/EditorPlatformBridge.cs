@@ -10,8 +10,11 @@ namespace DevOrbit.AdvancedNotificationEngine.Runtime.Bridges
     /// </summary>
     public class EditorPlatformBridge : IPlatformBridge
     {
+        public bool IsInitialized { get; private set; }
+
         public void Initialize()
         {
+            IsInitialized = true;
             Debug.Log("[EditorPlatformBridge] Initialized.");
         }
 

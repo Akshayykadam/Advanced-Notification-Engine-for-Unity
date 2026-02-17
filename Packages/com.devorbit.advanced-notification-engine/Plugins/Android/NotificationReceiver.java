@@ -6,10 +6,18 @@ import android.content.Intent;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.util.Log;
-import androidx.core.app.NotificationCompat;
+import android.app.Notification;
 import com.unity3d.player.UnityPlayer;
 
 public class NotificationReceiver extends BroadcastReceiver {
+
+    private void logToUnity(String msg) {
+        try {
+            UnityPlayer.UnitySendMessage("AdvancedNotificationEngineBridge", "OnNativeLog", msg);
+        } catch (Exception e) {
+            // Unity might not be running or initialized
+        }
+    }
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -19,6 +27,7 @@ public class NotificationReceiver extends BroadcastReceiver {
         String data = intent.getStringExtra("data");
 
         Log.d("AdvNotifReceiver", "Received Alarm: " + title);
+        logToUnity("Receiver: Alarm fired! ID=" + id + " Title=" + title);
 
         showNotification(context, id, title, body, data);
     }
@@ -33,7 +42,7 @@ public class NotificationReceiver extends BroadcastReceiver {
 
         PendingIntent pendingIntent = PendingIntent.getActivity(
                 context,
-                0,
+                id.hashCode(), // Use unique request code
                 launchIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
@@ -50,17 +59,56 @@ public class NotificationReceiver extends BroadcastReceiver {
             iconResId = android.R.drawable.sym_def_app_icon;
         }
 
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, "default")
+        NotificationManager notificationManager = (NotificationManager) context
+                .getSystemService(Context.NOTIFICATION_SERVICE);
+
+        // DEBUG: Check if notifications are enabled globally
+        boolean areEnabled = notificationManager.areNotificationsEnabled();
+        Log.d("AdvNotifReceiver", "Are Notifications Enabled? " + areEnabled);
+        logToUnity("Receiver: Notifications Enabled=" + areEnabled);
+
+        // Ensure channel exists
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            android.app.NotificationChannel channel = notificationManager.getNotificationChannel("default");
+            if (channel == null) {
+                Log.d("AdvNotifReceiver", "Channel 'default' not found, creating it...");
+                channel = new android.app.NotificationChannel(
+                        "default",
+                        "Default",
+                        android.app.NotificationManager.IMPORTANCE_HIGH);
+                channel.setDescription("Default Game Notifications");
+                channel.enableVibration(true);
+                notificationManager.createNotificationChannel(channel);
+            } else {
+                Log.d("AdvNotifReceiver", "Channel 'default' exists. Importance: " + channel.getImportance());
+            }
+        }
+
+        // Force system icon if custom one fails or just to be safe
+        if (iconResId == 0) {
+            Log.w("AdvNotifReceiver", "Icon ID is 0! Using system fallback.");
+            iconResId = android.R.drawable.ic_popup_reminder;
+        }
+
+        Notification.Builder builder = new Notification.Builder(context, "default")
                 .setSmallIcon(iconResId)
                 .setContentTitle(title)
                 .setContentText(body)
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true);
 
-        NotificationManager notificationManager = (NotificationManager) context
-                .getSystemService(Context.NOTIFICATION_SERVICE);
+        Log.d("AdvNotifReceiver", "Posting Notification | ID: " + id + " | Icon: " + iconResId);
+        logToUnity("Receiver: Posting ID=" + id + " Icon=" + iconResId);
+
         // ID should be int for notify, using hashcode
-        notificationManager.notify(id.hashCode(), builder.build());
+        try {
+            notificationManager.notify(id.hashCode(), builder.build());
+            Log.d("AdvNotifReceiver", "Notify called successfully.");
+            logToUnity("Receiver: Notify Success");
+        } catch (Exception e) {
+            Log.e("AdvNotifReceiver", "FAILED to notify: " + e.getMessage());
+            logToUnity("Receiver: Notify FAILED: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }

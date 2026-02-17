@@ -13,17 +13,20 @@ namespace DevOrbit.AdvancedNotificationEngine.Runtime.Bridges
         private AndroidJavaClass _nativeClass;
         private const string JAVA_CLASS_NAME = "com.devorbit.advancednotificationengine.AdvancedNotificationEngine";
 
+        public bool IsInitialized => _nativeClass != null;
+
         public void Initialize()
         {
             try
             {
                 _nativeClass = new AndroidJavaClass(JAVA_CLASS_NAME);
                 _nativeClass.CallStatic("initialize");
-                Debug.Log("[AndroidPlatformBridge] Initialized Native Java Class.");
+                Debug.Log("[AndroidPlatformBridge] Initialized Native Java Class SUCCESS.");
             }
             catch (Exception e)
             {
-                Debug.LogError($"[AndroidPlatformBridge] Failed to initialize: {e.Message}");
+                Debug.LogError($"[AndroidPlatformBridge] FAILED to initialize: {e.Message}\nStack: {e.StackTrace}");
+                _nativeClass = null; 
             }
         }
 
@@ -41,7 +44,13 @@ namespace DevOrbit.AdvancedNotificationEngine.Runtime.Bridges
         {
             if (_nativeClass == null) return;
             
-            long triggerTimeMs = new DateTimeOffset(request.TriggerTime).ToUnixTimeMilliseconds();
+            // Ensure UTC interpretation regardless of DateTime.Kind
+            DateTime utcTime = request.TriggerTime.Kind == DateTimeKind.Utc
+                ? request.TriggerTime
+                : DateTime.SpecifyKind(request.TriggerTime, DateTimeKind.Utc);
+            long triggerTimeMs = new DateTimeOffset(utcTime).ToUnixTimeMilliseconds();
+            long nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            Debug.Log($"[AndroidPlatformBridge] Schedule: trigger={triggerTimeMs} now={nowMs} delta={triggerTimeMs - nowMs}ms");
             string dataJson = ""; // Serialize data if needed
 
             _nativeClass.CallStatic("scheduleLocal", 

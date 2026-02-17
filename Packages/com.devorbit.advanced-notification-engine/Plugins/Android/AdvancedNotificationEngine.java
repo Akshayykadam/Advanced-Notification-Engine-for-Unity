@@ -18,12 +18,23 @@ public class AdvancedNotificationEngine {
     private static final String TAG = "AdvNotifEngine";
     private static Context context;
 
+    private static void logToUnity(String msg) {
+        try {
+            UnityPlayer.UnitySendMessage("AdvancedNotificationEngineBridge", "OnNativeLog", msg);
+        } catch (Exception e) {
+            // Unity not ready?
+        }
+    }
+
     public static void initialize() {
         context = UnityPlayer.currentActivity;
+        logToUnity("Java: Initializing Engine...");
         Log.d(TAG, "Initialized Native Android Module");
 
-        // Create default channel
-        createChannel("default", "Default", "Default Game Notifications", 3);
+        // Create default channel with HIGH importance (heads-up)
+        // 4 = NotificationManager.IMPORTANCE_HIGH
+        createChannel("default", "Default", "Default Game Notifications", 4);
+        logToUnity("Java: Default Channel Created");
     }
 
     public static void requestPermissions() {
@@ -33,9 +44,13 @@ public class AdvancedNotificationEngine {
                 ((android.app.Activity) context)
                         .requestPermissions(new String[] { "android.permission.POST_NOTIFICATIONS" }, 101);
                 Log.d(TAG, "Requested POST_NOTIFICATIONS permission");
+                logToUnity("Java: Requested POST_NOTIFICATIONS");
             } else {
                 Log.d(TAG, "POST_NOTIFICATIONS permission already granted");
+                logToUnity("Java: Permissions Already Granted");
             }
+        } else {
+            logToUnity("Java: Android < 13, no runtime perm needed.");
         }
     }
 
@@ -51,10 +66,38 @@ public class AdvancedNotificationEngine {
     }
 
     public static void scheduleLocal(String id, String title, String body, long triggerTime, String dataJson) {
-        // In a real implementation, we would use AlarmManager to trigger a
-        // BroadcastReceiver
-        // which then builds and shows the notification.
-        // For this streamlined implementation, we will log the intent.
+        long nowMs = System.currentTimeMillis();
+        long delayMs = triggerTime - nowMs;
+        logToUnity(
+                "Java: Scheduling ID=" + id + " triggerTime=" + triggerTime + " now=" + nowMs + " delayMs=" + delayMs);
+
+        if (delayMs < 0) {
+            delayMs = 0;
+            logToUnity("Java: WARNING - trigger time is in the past, firing immediately");
+        }
+
+        // For short delays (< 60s), use Handler.postDelayed — bypasses AlarmManager
+        // entirely
+        // This is more reliable and avoids SCHEDULE_EXACT_ALARM permission issues
+        if (delayMs < 60000) {
+            logToUnity("Java: Using Handler.postDelayed for short delay (" + delayMs + "ms)");
+            final Context ctx = context;
+            final String fId = id, fTitle = title, fBody = body, fData = dataJson;
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                logToUnity("Java: Handler fired! Showing notification now...");
+                NotificationReceiver receiver = new NotificationReceiver();
+                Intent intent = new Intent();
+                intent.putExtra("id", fId);
+                intent.putExtra("title", fTitle);
+                intent.putExtra("body", fBody);
+                intent.putExtra("data", fData);
+                receiver.onReceive(ctx, intent);
+            }, delayMs);
+            return;
+        }
+
+        // For longer delays, use AlarmManager
+        logToUnity("Java: Using AlarmManager for long delay (" + delayMs + "ms)");
 
         Intent intent = new Intent(context, NotificationReceiver.class);
         intent.putExtra("id", id);
@@ -62,7 +105,6 @@ public class AdvancedNotificationEngine {
         intent.putExtra("body", body);
         intent.putExtra("data", dataJson);
 
-        // Unique request code based on ID hash
         int requestCode = id.hashCode();
 
         PendingIntent pendingIntent = PendingIntent.getBroadcast(
@@ -74,14 +116,29 @@ public class AdvancedNotificationEngine {
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
 
         if (alarmManager != null) {
-            // Use setExactAndAllowWhileIdle for generic reliable timing
-            // specific permission SCHEDULE_EXACT_ALARM might be needed for Android 12+
             try {
-                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent);
+                // Try exact alarm first
+                if (Build.VERSION.SDK_INT >= 31 && !alarmManager.canScheduleExactAlarms()) {
+                    logToUnity("Java: Exact alarm NOT permitted, using inexact set()");
+                    alarmManager.set(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent);
+                } else {
+                    alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent);
+                    logToUnity("Java: Exact alarm scheduled OK");
+                }
                 Log.d(TAG, "Scheduled Alarm for: " + triggerTime);
             } catch (SecurityException e) {
+                logToUnity("Java: SECURITY ERROR: " + e.getMessage() + " — falling back to inexact alarm");
                 Log.e(TAG, "Permission error scheduling alarm: " + e.getMessage());
+                try {
+                    alarmManager.set(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent);
+                    logToUnity("Java: Inexact alarm fallback scheduled OK");
+                } catch (Exception e2) {
+                    logToUnity("Java: ALL alarm methods FAILED: " + e2.getMessage());
+                    Log.e(TAG, "All alarm methods failed: " + e2.getMessage());
+                }
             }
+        } else {
+            logToUnity("Java: ERROR - AlarmManager is null!");
         }
     }
 

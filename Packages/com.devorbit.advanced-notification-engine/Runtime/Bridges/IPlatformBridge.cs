@@ -10,6 +10,7 @@ namespace DevOrbit.AdvancedNotificationEngine.Runtime.Bridges
         /// <summary>
         /// Initializes the platform-specific notification system.
         /// </summary>
+        bool IsInitialized { get; }
         void Initialize();
 
         /// <summary>

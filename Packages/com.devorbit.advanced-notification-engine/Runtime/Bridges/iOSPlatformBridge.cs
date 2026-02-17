@@ -31,13 +31,17 @@ namespace DevOrbit.AdvancedNotificationEngine.Runtime.Bridges
         private static extern void _AdvNotif_UnsubscribeFromTopic(string topic);
 #endif
 
+        public bool IsInitialized { get; private set; }
+
         public void Initialize()
         {
 #if UNITY_IOS && !UNITY_EDITOR
             _AdvNotif_Initialize();
             Debug.Log("[iOSPlatformBridge] Initialized Native.");
+            IsInitialized = true;
 #else
             Debug.Log("[iOSPlatformBridge] Initialize (Editor Stub)");
+            IsInitialized = true;
 #endif
         }
 

@@ -19,6 +19,7 @@ namespace DevOrbit.AdvancedNotificationEngine.Demo
             NotificationManager.Initialize();
             NotificationManager.OnNotificationOpened += HandleNotificationOpened;
             NotificationManager.OnActionTriggered += HandleActionTriggered;
+            NotificationManager.OnNativeLog += HandleNativeLog;
             
             // Register a deep link route
             NotificationRouter.Register("promo", (data) =>
@@ -39,6 +40,7 @@ namespace DevOrbit.AdvancedNotificationEngine.Demo
         {
             NotificationManager.OnNotificationOpened -= HandleNotificationOpened;
             NotificationManager.OnActionTriggered -= HandleActionTriggered;
+            NotificationManager.OnNativeLog -= HandleNativeLog;
         }
 
         private void OnGUI()
@@ -69,6 +71,11 @@ namespace DevOrbit.AdvancedNotificationEngine.Demo
             if (GUILayout.Button("Print Inbox to Console", buttonStyle)) PrintInbox();
             GUILayout.Space(10);
             if (GUILayout.Button("Cancel All", buttonStyle)) CancelAll();
+            GUILayout.Space(10);
+            if (GUILayout.Button("Check Initialization", buttonStyle)) 
+            {
+                Log($"Is Initialized: {NotificationManager.IsInitialized}");
+            }
             
             GUILayout.EndArea();
 
@@ -163,6 +170,7 @@ namespace DevOrbit.AdvancedNotificationEngine.Demo
 
         private void HandleNotificationOpened(string id) => Log($"UI: User opened notification {id}");
         private void HandleActionTriggered(string action, Dictionary<string, string> payload) => Log($"UI: User clicked action '{action}'");
+        private void HandleNativeLog(string msg) => Log($"[Native] {msg}");
 
         private void Log(string msg)
         {
