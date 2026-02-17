@@ -28,7 +28,7 @@ A production-ready, cross-platform notification system for Unity — schedule lo
 
 **Via UPM** — Add git URL in Package Manager:
 ```
-https://github.com/AkshayKadam-DevOrbit/Advanced-Notification-Engine-for-Unity.git?path=Packages/com.devorbit.advanced-notification-engine
+https://github.com/Akshayykadam/Advanced-Notification-Engine-for-Unity.git?path=Packages/com.devorbit.advanced-notification-engine
 ```
 
 **Manual** — Copy `Packages/com.devorbit.advanced-notification-engine` into your project's `Packages/` folder.
