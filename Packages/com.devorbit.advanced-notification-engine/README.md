@@ -1,34 +1,39 @@
 # Advanced Notification Engine for Unity
 
-A production-ready, highly extensible notification system for Unity, supporting Android, iOS, and Editor testing.
+A production-ready, cross-platform notification system for Unity — schedule local & push notifications with deep linking, quiet hours, inbox history, and in-app overlays.
 
-**Version**: 1.0.0
-**Unity Version**: 2021.3+
+**Version**: 1.0.0 · **Unity**: 2021.3+ · **Platforms**: Android, iOS, Editor
 
-## Features
-- **Cross-Platform**: Unified API for Android and iOS.
-- **Deep Linking**: Route users to specific scenes or logic with `NotificationRouter`.
-- **Advanced Scheduling**: Exact alarms, repeating intervals (Daily/Weekly).
-- **Timezone Safe**: Automatically handles UTC <-> Local conversions.
-- **Quiet Hours**: Define "Do Not Disturb" windows (e.g., 10 PM - 8 AM).
-- **Inbox / History**: Automatically save and retrieve past notifications.
-- **In-App Overlays**: Display notification banners while the game is running.
-- **Rich Media**: Support for Big Picture and Large Icons.
-- **Channels & Topics**: Prepare for Android 8.0+ channels and Firebase topics.
+---
 
-## Installation
+## ✨ Features
 
-### Via Unity Package Manager (UPM)
-Add the package from disk or git URL:
-`https://github.com/your-repo/com.devorbit.advanced-notification-engine.git`
+| Feature | Description |
+|---|---|
+| **Local Notifications** | Schedule with exact timing, auto-fallback for restricted devices |
+| **Push Notifications** | Firebase Cloud Messaging topic subscription |
+| **Interactive Actions** | Add action buttons (Accept/Decline) to notifications |
+| **Deep Linking** | Route users to specific screens via `NotificationRouter` |
+| **Quiet Hours** | Auto-reschedule notifications outside DND windows |
+| **Notification Inbox** | Persist and query notification history |
+| **In-App Overlays** | Show banners while the app is in foreground |
+| **Timezone Safe** | Automatic UTC ↔ Local conversion |
+| **Robust Delivery** | `Handler.postDelayed` for short delays, `AlarmManager` with fallbacks for long delays |
 
-### Manual Installation
-Copy the `Packages/com.devorbit.advanced-notification-engine` folder into your project's `Packages` directory.
+---
 
-## Setup
+## 🚀 Quick Start
 
-1.  **Initialize**: Call `NotificationManager.Initialize()` early in your game (e.g., splash screen).
-2.  **Permissions**: Request notification permissions (Android 13+ / iOS).
+### Installation
+
+**Via UPM** — Add git URL in Package Manager:
+```
+https://github.com/AkshayKadam-DevOrbit/Advanced-Notification-Engine-for-Unity.git?path=Packages/com.devorbit.advanced-notification-engine
+```
+
+**Manual** — Copy `Packages/com.devorbit.advanced-notification-engine` into your project's `Packages/` folder.
+
+### Initialize
 
 ```csharp
 void Start()
@@ -40,9 +45,12 @@ void Start()
 }
 ```
 
-## Usage Guide
+---
 
-### 1. Scheduling a Local Notification
+## 📖 Usage
+
+### Schedule a Notification
+
 ```csharp
 var request = new LocalNotificationRequest
 {
@@ -50,15 +58,15 @@ var request = new LocalNotificationRequest
     Title = "Daily Reward Ready!",
     Body = "Claim your 100 Gems now.",
     TriggerTime = DateTime.UtcNow.AddHours(24),
-    SmallIcon = "icon_small", // Android resource name
-    LargeIcon = "icon_large", // Android resource name
-    Sound = "custom_sound"    // Resource name (no extension)
+    SmallIcon = "icon_small",
+    LargeIcon = "icon_large"
 };
 
 NotificationManager.ScheduleLocal(request);
 ```
 
-### 2. Interactive Actions (Buttons)
+### Interactive Actions
+
 ```csharp
 request.Actions = new[]
 {
@@ -66,53 +74,45 @@ request.Actions = new[]
     new NotificationAction("decline", "Ignore")
 };
 
-// Handle clicks
 NotificationManager.OnActionTriggered += (actionId, payload) =>
 {
     if (actionId == "accept") StartQuest();
 };
 ```
 
-### 3. Deep Linking (Routing)
-Route users to specific screens even if the app was closed.
+### Deep Linking
 
 ```csharp
-// Register routes once at startup
+// Register routes at startup
 NotificationRouter.Register("promo", (data) =>
 {
-    string code = data["code"];
-    ShopManager.OpenPromoPage(code);
+    ShopManager.OpenPromoPage(data["code"]);
 });
 
-// Schedule with data
+// Schedule with data payload
 var request = new LocalNotificationRequest
 {
     Id = "promo_123",
     Title = "Flash Sale!",
-    Data = new Dictionary<string, string> { 
-        { "type", "promo" }, 
-        { "code", "SUMMER2026" } 
+    Data = new Dictionary<string, string> {
+        { "type", "promo" },
+        { "code", "SUMMER2026" }
     }
 };
 ```
 
-### 4. Quiet Hours (Do Not Disturb)
-Automatically reschedule notifications that fall within quiet hours (e.g., 10 PM - 8 AM) to the next valid time.
+### Quiet Hours
 
 ```csharp
-var dnd = new DoNotDisturbSettings
+NotificationManager.SetQuietHours(new DoNotDisturbSettings
 {
     Enabled = true,
     StartHour = 22, // 10 PM
-    EndHour = 8,    // 8 AM
-    WeekendOnly = false
-};
-
-NotificationManager.SetQuietHours(dnd);
+    EndHour = 8     // 8 AM
+});
 ```
 
-### 5. Notification Inbox (History)
-Retrieve a list of past notifications to display in a "Messages" UI.
+### Notification Inbox
 
 ```csharp
 var history = NotificationHistory.GetHistory();
@@ -121,33 +121,77 @@ foreach (var item in history)
     Debug.Log($"{item.Title}: {item.Body} (Read: {item.WasRead})");
 }
 
-// Mark as read
 NotificationHistory.MarkAsRead(item.Id);
 ```
 
-### 6. In-App Overlays
-Show a notification banner if the user is playing the game when it arrives.
+### Firebase Push Topics
 
-1.  Create a UI Panel with the `NotificationOverlayController` component.
-2.  Assign your Text and Image references.
-3.  The controller automatically listens to `OnNotificationReceived`.
+```csharp
+NotificationManager.SubscribeToTopic("news");
+```
 
-## Platform Specifics
+> **Note**: Requires Firebase Unity SDK with `google-services.json` configured.
+
+### In-App Overlays
+
+1. Add `NotificationOverlayController` to a UI Panel
+2. Assign Title and Body text references
+3. The controller automatically listens to `OnNotificationReceived`
+
+The demo scene auto-creates the overlay if none exists.
+
+---
+
+## 🔧 Platform Setup
 
 ### Android
-- **Icons**: Place icon assets in `Plugins/Android/res/drawable/`.
-- **Manifest**: The plugin automatically handles standard permissions, but ensure your custom manifest includes `POST_NOTIFICATIONS` for Android 13+.
-- **Firebase**: The plugin assumes the Firebase SDK is present in the project. Ensure you have imported the Firebase Unity SDK (Messaging).
+
+- **Permissions**: `POST_NOTIFICATIONS`, `SCHEDULE_EXACT_ALARM`, `USE_EXACT_ALARM` are included in the plugin manifest
+- **Icons**: Place drawable resources in `Plugins/Android/res/drawable/`
+- **Delivery**: Uses `Handler.postDelayed` for delays under 60s (bypasses AlarmManager restrictions), with `AlarmManager` fallbacks for longer delays
+- **Firebase**: Import Firebase Unity SDK (Messaging) and add `google-services.json`
 
 ### iOS
-- Enable "Push Notifications" capability in Xcode.
-- Enable "Background Modes > Remote notifications" for silent updates.
-- **Firebase**: Ensure `GoogleService-Info.plist` is in your project and Firebase SDK is initialized.
 
-## Native Implementation Details
-This package includes native source code:
-- **Android**: `Plugins/Android/AdvancedNotificationEngine.java` handles AlarmManager and FirebaseMessaging.
-- **iOS**: `Plugins/iOS/AdvancedNotificationEngine.swift` handles UNUserNotificationCenter.
+- Enable **Push Notifications** capability in Xcode
+- Enable **Background Modes > Remote notifications**
+- Add `GoogleService-Info.plist` for Firebase
+
+---
+
+## 📁 Package Structure
+
+```
+com.devorbit.advanced-notification-engine/
+├── Demo/                    # Demo scene with interactive test UI
+├── Plugins/
+│   ├── Android/             # Java native code + AndroidManifest
+│   └── iOS/                 # Swift native code
+├── Runtime/
+│   ├── Core/                # NotificationManager, Scheduler, History, Router
+│   ├── Bridges/             # Platform-specific bridges (Android/iOS/Editor)
+│   ├── Models/              # Data models (Request, Action, Settings)
+│   └── UI/                  # Overlay controller
+└── Tests/                   # Unit tests
+```
+
+---
+
+## 🎮 Demo Scene
+
+The included demo provides a full test UI with buttons for:
+- **Schedule (5s)** — Local notification in 5 seconds
+- **Interactive** — Notification with Accept/Decline actions
+- **Foreground** — In-app overlay banner
+- **Quiet Hours** — Toggle DND mode
+- **Subscribe** — Firebase topic subscription
+- **Inbox** — Print notification history
+- **Cancel All** — Clear pending notifications
+
+A built-in console log displays all native and C# events in real-time.
+
+---
 
 ## Support
-Contact: support@devorbit.com
+
+**DevOrbit Studios** — contact@devorbit.com
