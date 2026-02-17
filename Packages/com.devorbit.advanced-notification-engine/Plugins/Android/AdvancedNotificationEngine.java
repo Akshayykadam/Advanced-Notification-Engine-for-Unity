@@ -161,18 +161,31 @@ public class AdvancedNotificationEngine {
     // --- Firebase Integration ---
 
     public static void subscribeToTopic(String topic) {
-        FirebaseMessaging.getInstance().subscribeToTopic(topic)
-                .addOnCompleteListener(task -> {
-                    String msg = "Subscribed to " + topic;
-                    if (!task.isSuccessful()) {
-                        msg = "Subscribe failed";
-                    }
-                    Log.d(TAG, msg);
-                });
+        logToUnity("Java: Subscribing to topic '" + topic + "'...");
+        try {
+            FirebaseMessaging.getInstance().subscribeToTopic(topic)
+                    .addOnCompleteListener(task -> {
+                        if (task.isSuccessful()) {
+                            logToUnity("Java: Subscribed to '" + topic + "' SUCCESS");
+                        } else {
+                            logToUnity("Java: Subscribe to '" + topic + "' FAILED");
+                        }
+                        Log.d(TAG, task.isSuccessful() ? "Subscribed to " + topic : "Subscribe failed");
+                    });
+        } catch (Exception e) {
+            logToUnity("Java: Firebase ERROR: " + e.getMessage());
+            Log.e(TAG, "Firebase subscribe error: " + e.getMessage());
+        }
     }
 
     public static void unsubscribeFromTopic(String topic) {
-        FirebaseMessaging.getInstance().unsubscribeFromTopic(topic);
+        logToUnity("Java: Unsubscribing from topic '" + topic + "'...");
+        try {
+            FirebaseMessaging.getInstance().unsubscribeFromTopic(topic);
+            logToUnity("Java: Unsubscribed from '" + topic + "'");
+        } catch (Exception e) {
+            logToUnity("Java: Firebase ERROR: " + e.getMessage());
+        }
         Log.d(TAG, "Unsubscribed from " + topic);
     }
 }

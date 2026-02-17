@@ -45,48 +45,130 @@ namespace DevOrbit.AdvancedNotificationEngine.Demo
 
         private void OnGUI()
         {
-            // Styles
-            GUIStyle buttonStyle = new GUIStyle(GUI.skin.button) { fontSize = 24, padding = new RectOffset(10, 10, 10, 10) };
-            GUIStyle labelStyle = new GUIStyle(GUI.skin.label) { fontSize = 24, fontStyle = FontStyle.Bold, normal = { textColor = Color.yellow } };
+            float sw = Screen.width;
+            float sh = Screen.height;
+            float pad = sw * 0.03f;
+            float spacing = sh * 0.008f;
+            float btnH = sh * 0.07f;
+            int fontSize = Mathf.Clamp((int)(sh * 0.025f), 16, 36);
 
-            GUILayout.BeginArea(new Rect(20, 20, 400, Screen.height - 40));
-            GUILayout.Label("Advanced Notification Engine", labelStyle);
-            GUILayout.Space(20);
-
-            if (GUILayout.Button("Schedule Simple (5s)", buttonStyle)) ScheduleSimpleNotification();
-            GUILayout.Space(10);
-            if (GUILayout.Button("Schedule Interactive", buttonStyle)) ScheduleInteractiveNotification();
-            GUILayout.Space(10);
-            if (GUILayout.Button("Simulate Foreground", buttonStyle)) SimulateForegroundNotification();
-            GUILayout.Space(10);
-            
-            // Quiet Hours
-            var dnd = NotificationManager.GetQuietHours();
-            string dndStatus = dnd.Enabled ? "ON" : "OFF";
-            if (GUILayout.Button($"Toggle Quiet Hours ({dndStatus})", buttonStyle)) ToggleQuietHours();
-            GUILayout.Space(10);
-
-            if (GUILayout.Button("Subscribe 'news'", buttonStyle)) NotificationManager.SubscribeToTopic("news");
-            GUILayout.Space(10);
-            if (GUILayout.Button("Print Inbox to Console", buttonStyle)) PrintInbox();
-            GUILayout.Space(10);
-            if (GUILayout.Button("Cancel All", buttonStyle)) CancelAll();
-            GUILayout.Space(10);
-            if (GUILayout.Button("Check Initialization", buttonStyle)) 
+            // --- Styles ---
+            GUIStyle titleStyle = new GUIStyle(GUI.skin.label)
             {
+                fontSize = (int)(fontSize * 1.4f),
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleCenter,
+                normal = { textColor = new Color(1f, 0.85f, 0.1f) }
+            };
+
+            GUIStyle btnStyle = new GUIStyle(GUI.skin.button)
+            {
+                fontSize = fontSize,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleCenter,
+                padding = new RectOffset(6, 6, 6, 6),
+                wordWrap = true
+            };
+
+            GUIStyle logHeaderStyle = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = (int)(fontSize * 0.9f),
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleLeft,
+                normal = { textColor = new Color(0.6f, 0.8f, 1f) }
+            };
+
+            GUIStyle logStyle = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = (int)(fontSize * 0.72f),
+                wordWrap = true,
+                richText = true,
+                normal = { textColor = new Color(0.85f, 0.85f, 0.85f) }
+            };
+
+            GUIStyle clearBtnStyle = new GUIStyle(GUI.skin.button)
+            {
+                fontSize = (int)(fontSize * 0.8f),
+                alignment = TextAnchor.MiddleCenter
+            };
+
+            // === TOP SECTION: Title + Buttons ===
+            float titleH = sh * 0.05f;
+            float topSectionH = titleH + spacing + (btnH + spacing) * 4 + spacing;
+            float btnAreaW = sw - pad * 2;
+
+            GUILayout.BeginArea(new Rect(pad, pad, btnAreaW, topSectionH));
+
+            // Title
+            GUILayout.Label("Advanced Notification Engine", titleStyle, GUILayout.Height(titleH));
+            GUILayout.Space(spacing);
+
+            // Row 1
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Schedule (5s)", btnStyle, GUILayout.Height(btnH)))
+                ScheduleSimpleNotification();
+            GUILayout.Space(spacing);
+            if (GUILayout.Button("Interactive", btnStyle, GUILayout.Height(btnH)))
+                ScheduleInteractiveNotification();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(spacing);
+
+            // Row 2
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Foreground", btnStyle, GUILayout.Height(btnH)))
+                SimulateForegroundNotification();
+            GUILayout.Space(spacing);
+            var dnd = NotificationManager.GetQuietHours();
+            string dndLabel = dnd.Enabled ? "Quiet Hours (ON)" : "Quiet Hours (OFF)";
+            if (GUILayout.Button(dndLabel, btnStyle, GUILayout.Height(btnH)))
+                ToggleQuietHours();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(spacing);
+
+            // Row 3
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Subscribe", btnStyle, GUILayout.Height(btnH)))
+                NotificationManager.SubscribeToTopic("news");
+            GUILayout.Space(spacing);
+            if (GUILayout.Button("Inbox", btnStyle, GUILayout.Height(btnH)))
+                PrintInbox();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(spacing);
+
+            // Row 4
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Cancel All", btnStyle, GUILayout.Height(btnH)))
+                CancelAll();
+            GUILayout.Space(spacing);
+            if (GUILayout.Button("Check Init", btnStyle, GUILayout.Height(btnH)))
                 Log($"Is Initialized: {NotificationManager.IsInitialized}");
-            }
-            
+            GUILayout.EndHorizontal();
+
             GUILayout.EndArea();
 
-            // Console Area
+            // === BOTTOM SECTION: Log Console ===
             if (_showConsole)
             {
-                GUILayout.BeginArea(new Rect(440, 20, Screen.width - 460, Screen.height - 40));
+                float logTop = pad + topSectionH + spacing * 2;
+                float logH = sh - logTop - pad;
+                float clearH = btnH * 0.6f;
+
+                GUILayout.BeginArea(new Rect(pad, logTop, btnAreaW, logH));
+
+                // Header row
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Console Log", logHeaderStyle, GUILayout.Height(clearH));
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button("Clear", clearBtnStyle, GUILayout.Width(sw * 0.18f), GUILayout.Height(clearH)))
+                    _consoleLog = "";
+                GUILayout.EndHorizontal();
+                GUILayout.Space(4);
+
+                // Log scroll area
                 _scrollPos = GUILayout.BeginScrollView(_scrollPos, "box");
-                GUILayout.Label(_consoleLog);
+                GUILayout.Label(_consoleLog, logStyle);
                 GUILayout.EndScrollView();
-                if (GUILayout.Button("Clear Log", GUILayout.Height(40))) _consoleLog = "";
+
                 GUILayout.EndArea();
             }
         }
@@ -198,14 +280,14 @@ namespace DevOrbit.AdvancedNotificationEngine.Demo
             rect.anchorMax = new Vector2(1, 1);
             rect.pivot = new Vector2(0.5f, 1);
             rect.anchoredPosition = new Vector2(0, 0);
-            rect.sizeDelta = new Vector2(0, 150); // Height 150
+            rect.sizeDelta = new Vector2(0, 150);
 
             // Title
             GameObject titleGo = new GameObject("Title");
             titleGo.transform.SetParent(panelGo.transform, false);
             Text titleText = titleGo.AddComponent<Text>();
             titleText.text = "Title";
-            titleText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            titleText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             titleText.fontSize = 28;
             titleText.color = Color.white;
             titleText.alignment = TextAnchor.MiddleLeft;
@@ -218,7 +300,7 @@ namespace DevOrbit.AdvancedNotificationEngine.Demo
             bodyGo.transform.SetParent(panelGo.transform, false);
             Text bodyText = bodyGo.AddComponent<Text>();
             bodyText.text = "Body text goes here...";
-            bodyText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            bodyText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             bodyText.fontSize = 20;
             bodyText.color = Color.gray;
             bodyText.alignment = TextAnchor.MiddleLeft;
