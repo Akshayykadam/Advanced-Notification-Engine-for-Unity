@@ -1,0 +1,18 @@
+{
+  "name": "com.devorbit.advanced-notification-engine",
+  "version": "1.0.0",
+  "displayName": "Advanced Notification Engine",
+  "description": "Production-ready notification system with behavioral logic, channels, and deep linking.",
+  "unity": "2021.3",
+  "documentationUrl": "https://example.com",
+  "keywords": [
+    "notifications",
+    "android",
+    "ios",
+    "push"
+  ],
+  "author": {
+    "name": "DevOrbit Studios",
+    "email": "contact@devorbit.com"
+  }
+}
