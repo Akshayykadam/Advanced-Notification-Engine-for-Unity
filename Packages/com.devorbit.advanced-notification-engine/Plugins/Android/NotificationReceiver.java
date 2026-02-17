@@ -37,8 +37,21 @@ public class NotificationReceiver extends BroadcastReceiver {
                 launchIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
+        int iconResId = context.getApplicationInfo().icon;
+        if (iconResId == 0) {
+            // Fallback for Unity apps if default icon is missing from ApplicationInfo
+            iconResId = context.getResources().getIdentifier("app_icon", "drawable", context.getPackageName());
+        }
+        if (iconResId == 0) {
+            iconResId = context.getResources().getIdentifier("app_icon", "mipmap", context.getPackageName());
+        }
+        if (iconResId == 0) {
+            // Ultimate fallback to system icon so SOMETHING shows up
+            iconResId = android.R.drawable.sym_def_app_icon;
+        }
+
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, "default")
-                .setSmallIcon(context.getApplicationInfo().icon) // Uses app icon by default
+                .setSmallIcon(iconResId)
                 .setContentTitle(title)
                 .setContentText(body)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)

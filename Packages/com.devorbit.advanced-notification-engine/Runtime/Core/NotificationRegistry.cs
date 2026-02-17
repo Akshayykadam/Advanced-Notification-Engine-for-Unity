@@ -5,9 +5,10 @@ using UnityEngine;
 namespace DevOrbit.AdvancedNotificationEngine.Runtime.Core
 {
     /// <summary>
-    /// internal class to track scheduled notification IDs.
+    /// Registry to track scheduled notification IDs. 
+    /// Made public for Editor tools, but intended for internal use.
     /// </summary>
-    internal static class NotificationRegistry
+    public static class NotificationRegistry
     {
         private const string PREF_KEY = "DevOrbit_Active_Notifications";
         

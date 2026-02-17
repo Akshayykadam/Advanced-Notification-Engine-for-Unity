@@ -75,26 +75,8 @@ namespace DevOrbit.AdvancedNotificationEngine.Runtime.Core
                 }
             }
             
-            // Register internally
+            // Register internally to track ID
             NotificationRegistry.Register(request.Id);
-            
-            // Pass to bridge (Accessing bridge via Manager is tricky if Scheduler is static util, 
-            // but Manager calls Scheduler usually. Here we modified Scheduler to just validate/modify request 
-            // before Manager sends it. Wait, Manager calls ScheduleLocal -> attempts to pass to bridge.
-            // Ideally Manager should call Scheduler.Process(request) and then pass to bridge.)
-            
-            // CORRECTION: In current architecture, Manager calls NotificationRegistry then Bridge.
-            // Scheduler was just a validation helper. 
-            // We need to inject this logic into Manager or make Manager call Scheduler to *modify* the request.
-            // Let's assume Manager calls Scheduler.Process(request) before sending.
-            // But wait, Manager.ScheduleLocal currently calls:
-            // 1. EnsureInitialized
-            // 2. NotificationRegistry.Register
-            // 3. _bridge.Schedule
-            
-            // Use this tool to Update SCHEDULER, but I need to update MANAGER to use Scheduler properly.
-            // Currently Scheduler.Schedule(request) is a void that does validation/logging but returns nothing.
-            // I will change it to `public static void ProcessRequest(LocalNotificationRequest request)` and modify the request object directly.
         }
     }
 }

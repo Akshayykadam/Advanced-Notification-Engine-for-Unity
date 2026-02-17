@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using DevOrbit.AdvancedNotificationEngine.Runtime.Bridges;
 using DevOrbit.AdvancedNotificationEngine.Runtime.Models;
@@ -159,19 +160,18 @@ namespace DevOrbit.AdvancedNotificationEngine.Runtime.Core
 
         // --- Internal / Bridge Callbacks ---
 
-        internal static void HandleNotificationReceived(LocalNotificationRequest request)
+        public static void HandleNotificationReceived(LocalNotificationRequest request)
         {
             OnNotificationReceived?.Invoke(request);
         }
 
-        internal static void HandleNotificationOpened(string payload)
-        {
+        public static void HandleNotificationOpened(string payload)
         {
             // Parse payload logic here later
             OnNotificationOpened?.Invoke(payload);
         }
 
-        internal static void HandleActionTriggered(string actionId, Dictionary<string, string> payload)
+        public static void HandleActionTriggered(string actionId, Dictionary<string, string> payload)
         {
             OnActionTriggered?.Invoke(actionId, payload);
         }
