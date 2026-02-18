@@ -1,5 +1,5 @@
 #import <Foundation/Foundation.h>
-#import "UnityFramework/UnityFramework-Swift.h" // Assumes Unity generates this header for Swift interop
+#import "UnityFramework/UnityFramework-Swift.h"
 
 extern "C" {
     
@@ -11,18 +11,29 @@ extern "C" {
         [[AdvancedNotificationEngine shared] requestPermissions];
     }
 
-    void _AdvNotif_ScheduleLocal(const char* id, const char* title, const char* body, double triggerTime, const char* dataJson) {
+    void _AdvNotif_ScheduleLocal(const char* id, const char* title, const char* body, double triggerTime, const char* dataJson, int repeatIntervalSeconds, const char* actionsJson) {
         NSString *nsId = [NSString stringWithUTF8String:id];
         NSString *nsTitle = [NSString stringWithUTF8String:title];
         NSString *nsBody = [NSString stringWithUTF8String:body];
-        NSString *nsDataFn = [NSString stringWithUTF8String:dataJson];
+        NSString *nsDataJson = [NSString stringWithUTF8String:dataJson];
+        NSString *nsActionsJson = [NSString stringWithUTF8String:actionsJson];
         
-        [[AdvancedNotificationEngine shared] scheduleLocalWithId:nsId title:nsTitle body:nsBody triggerTime:triggerTime dataJson:nsDataFn];
+        [[AdvancedNotificationEngine shared] scheduleLocalWithId:nsId
+                                                           title:nsTitle
+                                                            body:nsBody
+                                                     triggerTime:triggerTime
+                                                        dataJson:nsDataJson
+                                            repeatIntervalSeconds:repeatIntervalSeconds
+                                                     actionsJson:nsActionsJson];
     }
 
     void _AdvNotif_CancelLocal(const char* id) {
         NSString *nsId = [NSString stringWithUTF8String:id];
         [[AdvancedNotificationEngine shared] cancelLocalWithId:nsId];
+    }
+
+    void _AdvNotif_CancelAll() {
+        [[AdvancedNotificationEngine shared] cancelAll];
     }
 
     void _AdvNotif_SubscribeToTopic(const char* topic) {
@@ -34,6 +45,4 @@ extern "C" {
         NSString *nsTopic = [NSString stringWithUTF8String:topic];
         [[AdvancedNotificationEngine shared] unsubscribeFromTopicWithTopic:nsTopic];
     }
-
-    // Note: Creating Channels is not applicable on iOS, so no binding needed.
 }

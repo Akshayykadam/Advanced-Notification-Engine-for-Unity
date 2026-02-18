@@ -26,9 +26,14 @@ namespace DevOrbit.AdvancedNotificationEngine.Runtime.Core
                 return;
             }
 
-            if (request.TriggerTime <= DateTime.UtcNow)
+            if (request.TriggerTime <= DateTime.UtcNow && request.Repeat == Models.RepeatInterval.None)
             {
                 Debug.LogWarning($"[NotificationScheduler] Trigger time {request.TriggerTime} is in the past. Notification might fire immediately or be ignored depending on platform.");
+            }
+
+            if (request.Repeat != Models.RepeatInterval.None)
+            {
+                Debug.Log($"[NotificationScheduler] Repeating notification '{request.Id}' with interval: {request.Repeat}");
             }
 
             // Apply Quiet Hours logic

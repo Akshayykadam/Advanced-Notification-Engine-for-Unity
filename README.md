@@ -18,7 +18,7 @@ A production-ready, cross-platform notification system for Unity — schedule lo
 | **Notification Inbox** | Persist and query notification history |
 | **In-App Overlays** | Show banners while the app is in foreground |
 | **Timezone Safe** | Automatic UTC ↔ Local conversion |
-| **Robust Delivery** | `Handler.postDelayed` for short delays, `AlarmManager` with fallbacks for long delays |
+| **Robust Delivery** | `Handler.postDelayed` scheduling — no extra permissions required |
 
 ---
 
@@ -146,9 +146,9 @@ The demo scene auto-creates the overlay if none exists.
 
 ### Android
 
-- **Permissions**: `POST_NOTIFICATIONS`, `SCHEDULE_EXACT_ALARM`, `USE_EXACT_ALARM` are included in the plugin manifest
+- **Permissions**: Only `POST_NOTIFICATIONS` is required (Android 13+), no alarm permissions needed
 - **Icons**: Place drawable resources in `Plugins/Android/res/drawable/`
-- **Delivery**: Uses `Handler.postDelayed` for delays under 60s (bypasses AlarmManager restrictions), with `AlarmManager` fallbacks for longer delays
+- **Delivery**: Uses `Handler.postDelayed` for all scheduling — permission-free, no `AlarmManager` dependency
 - **Firebase**: Import Firebase Unity SDK (Messaging) and add `google-services.json`
 
 ### iOS

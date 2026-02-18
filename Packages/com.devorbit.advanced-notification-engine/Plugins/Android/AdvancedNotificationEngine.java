@@ -1,22 +1,20 @@
 package com.devorbit.advancednotificationengine;
 
-import android.app.AlarmManager;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.util.Log;
 import com.unity3d.player.UnityPlayer;
-import com.google.firebase.messaging.FirebaseMessaging;
-
-import java.util.Calendar;
+import java.util.HashMap;
 
 public class AdvancedNotificationEngine {
 
     private static final String TAG = "AdvNotifEngine";
     private static Context context;
+    private static final HashMap<String, Runnable> scheduledTasks = new HashMap<>();
+    private static final android.os.Handler mainHandler = new android.os.Handler(android.os.Looper.getMainLooper());
 
     private static void logToUnity(String msg) {
         try {
@@ -38,7 +36,7 @@ public class AdvancedNotificationEngine {
     }
 
     public static void requestPermissions() {
-        if (Build.VERSION.SDK_INT >= 33) { // Android 13 (TIRAMISU)
+        if (Build.VERSION.SDK_INT >= 33) {
             if (context.checkSelfPermission(
                     "android.permission.POST_NOTIFICATIONS") != android.content.pm.PackageManager.PERMISSION_GRANTED) {
                 ((android.app.Activity) context)
@@ -47,7 +45,7 @@ public class AdvancedNotificationEngine {
                 logToUnity("Java: Requested POST_NOTIFICATIONS");
             } else {
                 Log.d(TAG, "POST_NOTIFICATIONS permission already granted");
-                logToUnity("Java: Permissions Already Granted");
+                logToUnity("Java: POST_NOTIFICATIONS Already Granted");
             }
         } else {
             logToUnity("Java: Android < 13, no runtime perm needed.");
@@ -65,26 +63,29 @@ public class AdvancedNotificationEngine {
         }
     }
 
-    public static void scheduleLocal(String id, String title, String body, long triggerTime, String dataJson) {
+    public static void scheduleLocal(String id, String title, String body, long triggerTime, String dataJson,
+            long repeatIntervalMs) {
         long nowMs = System.currentTimeMillis();
         long delayMs = triggerTime - nowMs;
         logToUnity(
-                "Java: Scheduling ID=" + id + " triggerTime=" + triggerTime + " now=" + nowMs + " delayMs=" + delayMs);
+                "Java: Scheduling ID=" + id + " delayMs=" + delayMs + " repeatMs=" + repeatIntervalMs);
 
         if (delayMs < 0) {
             delayMs = 0;
-            logToUnity("Java: WARNING - trigger time is in the past, firing immediately");
+            logToUnity("Java: Trigger time is in the past, firing immediately");
         }
 
-        // For short delays (< 60s), use Handler.postDelayed — bypasses AlarmManager
-        // entirely
-        // This is more reliable and avoids SCHEDULE_EXACT_ALARM permission issues
-        if (delayMs < 60000) {
-            logToUnity("Java: Using Handler.postDelayed for short delay (" + delayMs + "ms)");
-            final Context ctx = context;
-            final String fId = id, fTitle = title, fBody = body, fData = dataJson;
-            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-                logToUnity("Java: Handler fired! Showing notification now...");
+        // Cancel any existing schedule with the same ID
+        cancelLocal(id);
+
+        final Context ctx = context;
+        final String fId = id, fTitle = title, fBody = body, fData = dataJson;
+        final long fRepeatMs = repeatIntervalMs;
+
+        Runnable fireNotification = new Runnable() {
+            @Override
+            public void run() {
+                logToUnity("Java: Handler fired! Showing notification: " + fId);
                 NotificationReceiver receiver = new NotificationReceiver();
                 Intent intent = new Intent();
                 intent.putExtra("id", fId);
@@ -92,87 +93,79 @@ public class AdvancedNotificationEngine {
                 intent.putExtra("body", fBody);
                 intent.putExtra("data", fData);
                 receiver.onReceive(ctx, intent);
-            }, delayMs);
-            return;
-        }
 
-        // For longer delays, use AlarmManager
-        logToUnity("Java: Using AlarmManager for long delay (" + delayMs + "ms)");
-
-        Intent intent = new Intent(context, NotificationReceiver.class);
-        intent.putExtra("id", id);
-        intent.putExtra("title", title);
-        intent.putExtra("body", body);
-        intent.putExtra("data", dataJson);
-
-        int requestCode = id.hashCode();
-
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(
-                context,
-                requestCode,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-
-        AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-
-        if (alarmManager != null) {
-            try {
-                // Try exact alarm first
-                if (Build.VERSION.SDK_INT >= 31 && !alarmManager.canScheduleExactAlarms()) {
-                    logToUnity("Java: Exact alarm NOT permitted, using inexact set()");
-                    alarmManager.set(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent);
+                // Re-schedule if repeating
+                if (fRepeatMs > 0) {
+                    logToUnity("Java: Re-scheduling repeating notification in " + fRepeatMs + "ms");
+                    mainHandler.postDelayed(this, fRepeatMs);
                 } else {
-                    alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent);
-                    logToUnity("Java: Exact alarm scheduled OK");
-                }
-                Log.d(TAG, "Scheduled Alarm for: " + triggerTime);
-            } catch (SecurityException e) {
-                logToUnity("Java: SECURITY ERROR: " + e.getMessage() + " — falling back to inexact alarm");
-                Log.e(TAG, "Permission error scheduling alarm: " + e.getMessage());
-                try {
-                    alarmManager.set(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent);
-                    logToUnity("Java: Inexact alarm fallback scheduled OK");
-                } catch (Exception e2) {
-                    logToUnity("Java: ALL alarm methods FAILED: " + e2.getMessage());
-                    Log.e(TAG, "All alarm methods failed: " + e2.getMessage());
+                    scheduledTasks.remove(fId);
                 }
             }
-        } else {
-            logToUnity("Java: ERROR - AlarmManager is null!");
-        }
+        };
+
+        scheduledTasks.put(id, fireNotification);
+        mainHandler.postDelayed(fireNotification, delayMs);
+        logToUnity("Java: Notification scheduled via Handler (delay=" + delayMs + "ms)");
+        Log.d(TAG, "Scheduled via Handler: " + id + " delay=" + delayMs);
     }
 
     public static void cancelLocal(String id) {
-        Intent intent = new Intent(context, NotificationReceiver.class);
-        int requestCode = id.hashCode();
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(
-                context,
-                requestCode,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-
-        AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        if (alarmManager != null) {
-            alarmManager.cancel(pendingIntent);
-            Log.d(TAG, "Cancelled Alarm: " + id);
+        Runnable task = scheduledTasks.remove(id);
+        if (task != null) {
+            mainHandler.removeCallbacks(task);
+            Log.d(TAG, "Cancelled scheduled notification: " + id);
+            logToUnity("Java: Cancelled notification: " + id);
+        } else {
+            Log.d(TAG, "No scheduled notification found for: " + id);
         }
     }
 
-    // --- Firebase Integration ---
+    public static void cancelAll() {
+        // Cancel all scheduled handler tasks
+        for (Runnable task : scheduledTasks.values()) {
+            mainHandler.removeCallbacks(task);
+        }
+        scheduledTasks.clear();
+
+        // Also dismiss any already-shown notifications
+        NotificationManager notifManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (notifManager != null) {
+            notifManager.cancelAll();
+        }
+        logToUnity("Java: Cancelled all notifications");
+        Log.d(TAG, "Cancelled all notifications");
+    }
+
+    // --- Firebase Integration (optional — works only if Firebase SDK is present)
+    // ---
 
     public static void subscribeToTopic(String topic) {
-        FirebaseMessaging.getInstance().subscribeToTopic(topic)
-                .addOnCompleteListener(task -> {
-                    String msg = "Subscribed to " + topic;
-                    if (!task.isSuccessful()) {
-                        msg = "Subscribe failed";
-                    }
-                    Log.d(TAG, msg);
-                });
+        try {
+            Class<?> fbClass = Class.forName("com.google.firebase.messaging.FirebaseMessaging");
+            Object instance = fbClass.getMethod("getInstance").invoke(null);
+            java.lang.reflect.Method subscribe = fbClass.getMethod("subscribeToTopic", String.class);
+            subscribe.invoke(instance, topic);
+            Log.d(TAG, "Subscribed to " + topic);
+            logToUnity("Java: Subscribing to topic '" + topic + "'");
+        } catch (Exception e) {
+            Log.w(TAG, "Firebase not available — cannot subscribe to " + topic);
+            logToUnity("Java: Firebase not available for topic subscription");
+        }
     }
 
     public static void unsubscribeFromTopic(String topic) {
-        FirebaseMessaging.getInstance().unsubscribeFromTopic(topic);
-        Log.d(TAG, "Unsubscribed from " + topic);
+        try {
+            Class<?> fbClass = Class.forName("com.google.firebase.messaging.FirebaseMessaging");
+            Object instance = fbClass.getMethod("getInstance").invoke(null);
+            java.lang.reflect.Method unsubscribe = fbClass.getMethod("unsubscribeFromTopic", String.class);
+            unsubscribe.invoke(instance, topic);
+            Log.d(TAG, "Unsubscribed from " + topic);
+            logToUnity("Java: Unsubscribed from '" + topic + "'");
+        } catch (Exception e) {
+            Log.w(TAG, "Firebase not available — cannot unsubscribe from " + topic);
+            logToUnity("Java: Firebase not available for topic unsubscription");
+        }
     }
+
 }

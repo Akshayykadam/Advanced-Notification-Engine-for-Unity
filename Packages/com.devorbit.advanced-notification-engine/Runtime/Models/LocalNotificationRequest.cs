@@ -69,6 +69,17 @@ namespace DevOrbit.AdvancedNotificationEngine.Runtime.Models
         /// </summary>
         public string Group;
 
+        /// <summary>
+        /// How this notification should repeat. Default: None (fires once).
+        /// </summary>
+        public RepeatInterval Repeat = RepeatInterval.None;
+
+        /// <summary>
+        /// Custom repeat interval in seconds. Only used when Repeat = Custom.
+        /// Minimum 60 seconds on iOS.
+        /// </summary>
+        public int CustomRepeatSeconds = 0;
+
         public LocalNotificationRequest()
         {
             Data = new Dictionary<string, string>();

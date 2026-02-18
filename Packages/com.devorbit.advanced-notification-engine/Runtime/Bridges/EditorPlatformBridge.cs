@@ -26,7 +26,7 @@ namespace DevOrbit.AdvancedNotificationEngine.Runtime.Bridges
 
         public void Schedule(LocalNotificationRequest request)
         {
-            Debug.Log($"[EditorPlatformBridge] Scheduled Notification: ID={request.Id}, Title='{request.Title}', Trigger={request.TriggerTime}");
+            Debug.Log($"[EditorPlatformBridge] Scheduled Notification: ID={request.Id}, Title='{request.Title}', Trigger={request.TriggerTime}, Repeat={request.Repeat}");
         }
 
         public void Cancel(string id)

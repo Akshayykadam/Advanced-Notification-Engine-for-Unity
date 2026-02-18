@@ -50,16 +50,32 @@ namespace DevOrbit.AdvancedNotificationEngine.Runtime.Bridges
                 : DateTime.SpecifyKind(request.TriggerTime, DateTimeKind.Utc);
             long triggerTimeMs = new DateTimeOffset(utcTime).ToUnixTimeMilliseconds();
             long nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-            Debug.Log($"[AndroidPlatformBridge] Schedule: trigger={triggerTimeMs} now={nowMs} delta={triggerTimeMs - nowMs}ms");
+            Debug.Log($"[AndroidPlatformBridge] Schedule: trigger={triggerTimeMs} now={nowMs} delta={triggerTimeMs - nowMs}ms repeat={request.Repeat}");
             string dataJson = ""; // Serialize data if needed
+
+            // Calculate repeat interval in milliseconds
+            long repeatIntervalMs = GetRepeatIntervalMs(request);
 
             _nativeClass.CallStatic("scheduleLocal", 
                 request.Id, 
                 request.Title, 
                 request.Body, 
                 triggerTimeMs,
-                dataJson
+                dataJson,
+                repeatIntervalMs
             );
+        }
+
+        private long GetRepeatIntervalMs(LocalNotificationRequest request)
+        {
+            switch (request.Repeat)
+            {
+                case RepeatInterval.Hourly: return 3600L * 1000L;
+                case RepeatInterval.Daily: return 24L * 3600L * 1000L;
+                case RepeatInterval.Weekly: return 7L * 24L * 3600L * 1000L;
+                case RepeatInterval.Custom: return (long)request.CustomRepeatSeconds * 1000L;
+                default: return 0L;
+            }
         }
 
         public void Cancel(string id)
@@ -70,9 +86,9 @@ namespace DevOrbit.AdvancedNotificationEngine.Runtime.Bridges
 
         public void CancelAll()
         {
-            // Native side cancellation of all isn't implemented in Java yet, 
-            // but we can just clear registry on C# side or impl specific logic.
-            Debug.Log("[AndroidPlatformBridge] CancelAll locally.");
+            if (_nativeClass == null) return;
+            _nativeClass.CallStatic("cancelAll");
+            Debug.Log("[AndroidPlatformBridge] CancelAll via native.");
         }
 
         public void CreateChannel(string id, string name, string description)

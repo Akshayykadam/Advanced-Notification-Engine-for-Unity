@@ -94,7 +94,7 @@ namespace DevOrbit.AdvancedNotificationEngine.Demo
 
             // === TOP SECTION: Title + Buttons ===
             float titleH = sh * 0.05f;
-            float topSectionH = titleH + spacing + (btnH + spacing) * 4 + spacing;
+            float topSectionH = titleH + spacing + (btnH + spacing) * 5 + spacing;
             float btnAreaW = sw - pad * 2;
 
             GUILayout.BeginArea(new Rect(pad, pad, btnAreaW, topSectionH));
@@ -142,6 +142,16 @@ namespace DevOrbit.AdvancedNotificationEngine.Demo
             GUILayout.Space(spacing);
             if (GUILayout.Button("Check Init", btnStyle, GUILayout.Height(btnH)))
                 Log($"Is Initialized: {NotificationManager.IsInitialized}");
+            GUILayout.EndHorizontal();
+            GUILayout.Space(spacing);
+
+            // Row 5
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Repeat Daily", btnStyle, GUILayout.Height(btnH)))
+                ScheduleRepeatingNotification();
+            GUILayout.Space(spacing);
+            if (GUILayout.Button("Repeat Hourly", btnStyle, GUILayout.Height(btnH)))
+                ScheduleHourlyNotification();
             GUILayout.EndHorizontal();
 
             GUILayout.EndArea();
@@ -204,6 +214,36 @@ namespace DevOrbit.AdvancedNotificationEngine.Demo
             
             NotificationManager.ScheduleLocal(request);
             Log("Scheduled Interactive Notification.");
+        }
+
+        public void ScheduleRepeatingNotification()
+        {
+            var request = new LocalNotificationRequest
+            {
+                Id = "demo_daily",
+                Title = "Daily Reward",
+                Body = "Your daily reward is ready! Tap to collect.",
+                TriggerTime = DateTime.UtcNow.AddSeconds(10),
+                Repeat = RepeatInterval.Daily
+            };
+            
+            NotificationManager.ScheduleLocal(request);
+            Log($"Scheduled Daily Repeating Notification (first in 10s).");
+        }
+
+        public void ScheduleHourlyNotification()
+        {
+            var request = new LocalNotificationRequest
+            {
+                Id = "demo_hourly",
+                Title = "Hourly Check-In",
+                Body = "Come back and play!",
+                TriggerTime = DateTime.UtcNow.AddSeconds(10),
+                Repeat = RepeatInterval.Hourly
+            };
+            
+            NotificationManager.ScheduleLocal(request);
+            Log($"Scheduled Hourly Repeating Notification (first in 10s).");
         }
 
         public void ToggleQuietHours()
