@@ -51,7 +51,25 @@ namespace DevOrbit.AdvancedNotificationEngine.Runtime.Bridges
             long triggerTimeMs = new DateTimeOffset(utcTime).ToUnixTimeMilliseconds();
             long nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             Debug.Log($"[AndroidPlatformBridge] Schedule: trigger={triggerTimeMs} now={nowMs} delta={triggerTimeMs - nowMs}ms repeat={request.Repeat}");
-            string dataJson = ""; // Serialize data if needed
+            // Serialize data dictionary to JSON
+            string dataJson = "{}";
+            if (request.Data != null && request.Data.Count > 0)
+            {
+                var dataPairs = new System.Collections.Generic.List<string>();
+                foreach (var kvp in request.Data)
+                    dataPairs.Add($"\"{kvp.Key}\":\"{kvp.Value}\"");
+                dataJson = "{" + string.Join(",", dataPairs) + "}";
+            }
+
+            // Serialize actions to JSON array
+            string actionsJson = "[]";
+            if (request.Actions != null && request.Actions.Length > 0)
+            {
+                var actionItems = new System.Collections.Generic.List<string>();
+                foreach (var action in request.Actions)
+                    actionItems.Add($"{{\"id\":\"{action.Id}\",\"title\":\"{action.Title}\"}}");
+                actionsJson = "[" + string.Join(",", actionItems) + "]";
+            }
 
             // Calculate repeat interval in milliseconds
             long repeatIntervalMs = GetRepeatIntervalMs(request);
@@ -62,7 +80,8 @@ namespace DevOrbit.AdvancedNotificationEngine.Runtime.Bridges
                 request.Body, 
                 triggerTimeMs,
                 dataJson,
-                repeatIntervalMs
+                repeatIntervalMs,
+                actionsJson
             );
         }
 

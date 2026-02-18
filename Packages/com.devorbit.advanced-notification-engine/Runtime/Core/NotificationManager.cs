@@ -77,6 +77,47 @@ namespace DevOrbit.AdvancedNotificationEngine.Runtime.Core
                 Debug.Log("[Native-Android] " + msg);
                 NotificationManager.OnNativeLog?.Invoke(msg);
             }
+
+            public void OnActionTriggered(string payload)
+            {
+                Debug.Log("[Native-Android] Action triggered: " + payload);
+                // Payload format: actionId|dataJson
+                string actionId = payload;
+                var data = new Dictionary<string, string>();
+
+                int separatorIndex = payload.IndexOf('|');
+                if (separatorIndex >= 0)
+                {
+                    actionId = payload.Substring(0, separatorIndex);
+                    string dataJson = payload.Substring(separatorIndex + 1);
+                    // Simple JSON parse for flat key-value pairs
+                    if (!string.IsNullOrEmpty(dataJson) && dataJson != "{}")
+                    {
+                        try
+                        {
+                            // Strip braces and split
+                            dataJson = dataJson.Trim('{', '}');
+                            var pairs = dataJson.Split(',');
+                            foreach (var pair in pairs)
+                            {
+                                var kv = pair.Split(new[] { ':' }, 2);
+                                if (kv.Length == 2)
+                                {
+                                    string key = kv[0].Trim().Trim('"');
+                                    string val = kv[1].Trim().Trim('"');
+                                    data[key] = val;
+                                }
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.LogWarning("[NotificationBridge] Failed to parse action data: " + e.Message);
+                        }
+                    }
+                }
+
+                NotificationManager.HandleActionTriggered(actionId, data);
+            }
         }
 
         /// <summary>

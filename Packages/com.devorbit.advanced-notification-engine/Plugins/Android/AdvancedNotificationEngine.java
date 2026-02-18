@@ -64,7 +64,7 @@ public class AdvancedNotificationEngine {
     }
 
     public static void scheduleLocal(String id, String title, String body, long triggerTime, String dataJson,
-            long repeatIntervalMs) {
+            long repeatIntervalMs, String actionsJson) {
         long nowMs = System.currentTimeMillis();
         long delayMs = triggerTime - nowMs;
         logToUnity(
@@ -79,7 +79,7 @@ public class AdvancedNotificationEngine {
         cancelLocal(id);
 
         final Context ctx = context;
-        final String fId = id, fTitle = title, fBody = body, fData = dataJson;
+        final String fId = id, fTitle = title, fBody = body, fData = dataJson, fActions = actionsJson;
         final long fRepeatMs = repeatIntervalMs;
 
         Runnable fireNotification = new Runnable() {
@@ -92,6 +92,7 @@ public class AdvancedNotificationEngine {
                 intent.putExtra("title", fTitle);
                 intent.putExtra("body", fBody);
                 intent.putExtra("data", fData);
+                intent.putExtra("actions", fActions);
                 receiver.onReceive(ctx, intent);
 
                 // Re-schedule if repeating

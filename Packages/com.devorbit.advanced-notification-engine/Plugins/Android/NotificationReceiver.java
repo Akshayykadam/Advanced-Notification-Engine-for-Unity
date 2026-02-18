@@ -8,6 +8,8 @@ import android.app.PendingIntent;
 import android.util.Log;
 import android.app.Notification;
 import com.unity3d.player.UnityPlayer;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 public class NotificationReceiver extends BroadcastReceiver {
 
@@ -25,14 +27,16 @@ public class NotificationReceiver extends BroadcastReceiver {
         String title = intent.getStringExtra("title");
         String body = intent.getStringExtra("body");
         String data = intent.getStringExtra("data");
+        String actions = intent.getStringExtra("actions");
 
         Log.d("AdvNotifReceiver", "Received Alarm: " + title);
         logToUnity("Receiver: Alarm fired! ID=" + id + " Title=" + title);
 
-        showNotification(context, id, title, body, data);
+        showNotification(context, id, title, body, data, actions);
     }
 
-    private void showNotification(Context context, String id, String title, String body, String data) {
+    private void showNotification(Context context, String id, String title, String body, String data,
+            String actionsJson) {
         // Intent to open the game when clicked
         Intent launchIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
         if (launchIntent != null) {
@@ -97,12 +101,44 @@ public class NotificationReceiver extends BroadcastReceiver {
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true);
 
+        // Add action buttons if provided
+        int notifId = id.hashCode();
+        if (actionsJson != null && !actionsJson.equals("[]")) {
+            try {
+                JSONArray actionsArray = new JSONArray(actionsJson);
+                for (int i = 0; i < actionsArray.length(); i++) {
+                    JSONObject actionObj = actionsArray.getJSONObject(i);
+                    String actionId = actionObj.getString("id");
+                    String actionTitle = actionObj.getString("title");
+
+                    Intent actionIntent = new Intent(context, NotificationActionReceiver.class);
+                    actionIntent.setAction("com.devorbit.advancednotificationengine.ACTION_" + actionId.toUpperCase());
+                    actionIntent.putExtra("action_id", actionId);
+                    actionIntent.putExtra("notification_id", id);
+                    actionIntent.putExtra("notification_int_id", notifId);
+                    actionIntent.putExtra("data", data);
+
+                    PendingIntent actionPendingIntent = PendingIntent.getBroadcast(
+                            context,
+                            (id + "_" + actionId).hashCode(),
+                            actionIntent,
+                            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+                    builder.addAction(0, actionTitle, actionPendingIntent);
+                    logToUnity("Receiver: Added action button '" + actionTitle + "' (" + actionId + ")");
+                }
+            } catch (Exception e) {
+                Log.w("AdvNotifReceiver", "Failed to parse actions JSON: " + e.getMessage());
+                logToUnity("Receiver: Failed to parse actions: " + e.getMessage());
+            }
+        }
+
         Log.d("AdvNotifReceiver", "Posting Notification | ID: " + id + " | Icon: " + iconResId);
         logToUnity("Receiver: Posting ID=" + id + " Icon=" + iconResId);
 
         // ID should be int for notify, using hashcode
         try {
-            notificationManager.notify(id.hashCode(), builder.build());
+            notificationManager.notify(notifId, builder.build());
             Log.d("AdvNotifReceiver", "Notify called successfully.");
             logToUnity("Receiver: Notify Success");
         } catch (Exception e) {

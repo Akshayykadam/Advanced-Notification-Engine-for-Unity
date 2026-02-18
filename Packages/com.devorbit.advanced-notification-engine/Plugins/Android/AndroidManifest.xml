@@ -10,5 +10,8 @@
         <receiver android:name="com.devorbit.advancednotificationengine.NotificationReceiver"
                   android:exported="false">
         </receiver>
+        <receiver android:name="com.devorbit.advancednotificationengine.NotificationActionReceiver"
+                  android:exported="false">
+        </receiver>
     </application>
 </manifest>
