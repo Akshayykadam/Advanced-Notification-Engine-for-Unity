@@ -6,6 +6,10 @@ import UserNotifications
 import FirebaseMessaging
 #endif
 
+// Unity's C function for sending messages back to C# GameObjects
+@_silgen_name("UnitySendMessage")
+func UnitySendMessage(_ obj: UnsafePointer<CChar>?, _ method: UnsafePointer<CChar>?, _ msg: UnsafePointer<CChar>?)
+
 @objc public class AdvancedNotificationEngine: NSObject, UNUserNotificationCenterDelegate {
     
     @objc public static let shared = AdvancedNotificationEngine()
