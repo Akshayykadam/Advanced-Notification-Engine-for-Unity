@@ -1,8 +1,9 @@
 import Foundation
 import UserNotifications
 
-// Firebase is optional — only used if present in the project
-#if canImport(FirebaseMessaging)
+// Firebase is optional — to enable, add FIREBASE_MESSAGING_ENABLED to
+// Xcode > Build Settings > Swift Compiler > Active Compilation Conditions
+#if FIREBASE_MESSAGING_ENABLED
 import FirebaseMessaging
 #endif
 
@@ -21,7 +22,7 @@ func UnitySendMessage(_ obj: UnsafePointer<CChar>?, _ method: UnsafePointer<CCha
     @objc public func initialize() {
         UNUserNotificationCenter.current().delegate = self
         
-        #if canImport(FirebaseMessaging)
+        #if FIREBASE_MESSAGING_ENABLED
         Messaging.messaging().delegate = self
         #endif
         
@@ -139,7 +140,7 @@ func UnitySendMessage(_ obj: UnsafePointer<CChar>?, _ method: UnsafePointer<CCha
     // MARK: - Firebase Topics (optional)
     
     @objc public func subscribeToTopic(topic: String) {
-        #if canImport(FirebaseMessaging)
+        #if FIREBASE_MESSAGING_ENABLED
         Messaging.messaging().subscribe(toTopic: topic) { error in
             if let error = error {
                 print("[AdvNotifEngine] Subscribe error: \(error)")
@@ -154,7 +155,7 @@ func UnitySendMessage(_ obj: UnsafePointer<CChar>?, _ method: UnsafePointer<CCha
     }
     
     @objc public func unsubscribeFromTopic(topic: String) {
-        #if canImport(FirebaseMessaging)
+        #if FIREBASE_MESSAGING_ENABLED
         Messaging.messaging().unsubscribe(fromTopic: topic) { error in
             print("[AdvNotifEngine] Unsubscribed from \(topic)")
         }
@@ -220,7 +221,7 @@ extension AdvancedNotificationEngine: UNUserNotificationCenterDelegate {
 
 // MARK: - Firebase Messaging Delegate (optional)
 
-#if canImport(FirebaseMessaging)
+#if FIREBASE_MESSAGING_ENABLED
 extension AdvancedNotificationEngine: MessagingDelegate {
     public func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
         print("[AdvNotifEngine] FCM Token: \(fcmToken ?? "nil")")
