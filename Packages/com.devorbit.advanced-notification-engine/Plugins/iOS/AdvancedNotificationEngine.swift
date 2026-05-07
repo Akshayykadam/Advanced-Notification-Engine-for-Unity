@@ -10,7 +10,7 @@ import FirebaseMessaging
 @_silgen_name("UnitySendMessage")
 func UnitySendMessage(_ obj: UnsafePointer<CChar>?, _ method: UnsafePointer<CChar>?, _ msg: UnsafePointer<CChar>?)
 
-@objc public class AdvancedNotificationEngine: NSObject, UNUserNotificationCenterDelegate {
+@objc public class AdvancedNotificationEngine: NSObject {
     
     @objc public static let shared = AdvancedNotificationEngine()
     
@@ -163,7 +163,27 @@ func UnitySendMessage(_ obj: UnsafePointer<CChar>?, _ method: UnsafePointer<CCha
         #endif
     }
     
-    // MARK: - UNUserNotificationCenterDelegate
+    // MARK: - Unity Communication
+    
+    private func sendToUnity(method: String, message: String) {
+        // UnitySendMessage sends a message to a GameObject named "AdvancedNotificationEngineBridge"
+        // which has the NotificationBridgeReceiver MonoBehaviour attached
+        let gameObject = "AdvancedNotificationEngineBridge"
+        let cGameObject = strdup(gameObject)
+        let cMethod = strdup(method)
+        let cMessage = strdup(message)
+        UnitySendMessage(cGameObject, cMethod, cMessage)
+        free(cGameObject)
+        free(cMethod)
+        free(cMessage)
+    }
+}
+
+// MARK: - UNUserNotificationCenterDelegate
+// Declared in a separate extension so UNUserNotificationCenter types
+// don't appear in the class declaration of the generated ObjC header.
+
+extension AdvancedNotificationEngine: UNUserNotificationCenterDelegate {
     
     public func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         // Show banner even when app is in foreground
@@ -183,7 +203,6 @@ func UnitySendMessage(_ obj: UnsafePointer<CChar>?, _ method: UnsafePointer<CCha
     public func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
         let userInfo = response.notification.request.content.userInfo
         let id = userInfo["id"] as? String ?? response.notification.request.identifier
-        let payload = userInfo["payload"] as? String ?? ""
         
         if response.actionIdentifier == UNNotificationDefaultActionIdentifier {
             // User tapped the notification itself
@@ -196,21 +215,6 @@ func UnitySendMessage(_ obj: UnsafePointer<CChar>?, _ method: UnsafePointer<CCha
         }
         
         completionHandler()
-    }
-    
-    // MARK: - Unity Communication
-    
-    private func sendToUnity(method: String, message: String) {
-        // UnitySendMessage sends a message to a GameObject named "AdvancedNotificationEngineBridge"
-        // which has the NotificationBridgeReceiver MonoBehaviour attached
-        let gameObject = "AdvancedNotificationEngineBridge"
-        let cGameObject = strdup(gameObject)
-        let cMethod = strdup(method)
-        let cMessage = strdup(message)
-        UnitySendMessage(cGameObject, cMethod, cMessage)
-        free(cGameObject)
-        free(cMethod)
-        free(cMessage)
     }
 }
 
